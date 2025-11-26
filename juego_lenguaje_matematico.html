@@ -1,0 +1,517 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Juego: Lenguaje Matemático </title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --glass: rgba(255,255,255,0.04);
+    --accent1: #00d4ff;
+    --accent2: #0066ff;
+    --bg-dark: #071021;
+    --card-bg: rgba(255,255,255,0.03);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
+    background:var(--bg-dark);
+    color:#e9f6ff;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    overflow:hidden;
+  }
+
+  /* video fondo */
+  .video-bg{
+    position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;filter:brightness(0.56) saturate(1.05);
+  }
+  .overlay{position:fixed;inset:0;background:linear-gradient(180deg, rgba(2,6,23,0.3), rgba(2,6,23,0.6));z-index:-1}
+
+  /* layout */
+  .app{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{
+    width:min(980px,96%);max-width:1100px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:16px;padding:22px 22px 28px;backdrop-filter:blur(6px);box-shadow:0 18px 50px rgba(0,0,0,0.6);
+    border:1px solid rgba(255,255,255,0.03);position:relative;
+  }
+
+  /* header */
+  .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent1),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:800;color:#012;box-shadow:0 6px 20px rgba(0,0,0,0.4)}
+  .title{font-weight:700;font-size:18px}
+  .subtitle{font-size:13px;color:#bcd7ee}
+
+  /* progress + meta */
+  .meta{display:flex;align-items:center;gap:12px}
+  .progress-wrap{width:340px;background:rgba(255,255,255,0.03);border-radius:999px;padding:6px;border:1px solid rgba(255,255,255,0.02);}
+  .progress-bar{height:12px;border-radius:999px;background:linear-gradient(90deg,var(--accent1),var(--accent2));width:0%;transition:width .5s cubic-bezier(.2,.9,.3,1)}
+  .score{font-weight:700;text-align:right;font-size:14px;color:#dff7ff}
+
+  /* main area */
+  .main{display:flex;gap:18px;align-items:flex-start}
+  .left{flex:1}
+  .question-card{background:var(--card-bg);padding:20px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);box-shadow:0 8px 30px rgba(2,6,23,0.5);min-height:220px;display:flex;flex-direction:column;justify-content:space-between;transition:transform .25s ease}
+  .question-card.enter{animation:cardIn .36s ease}
+  @keyframes cardIn{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
+
+  .qtext{font-size:20px;font-weight:700;margin-bottom:12px;text-shadow:0 4px 18px rgba(0,0,0,0.4)}
+  .opts{display:flex;flex-direction:column;gap:12px}
+
+  /* option button */
+  .opt{
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border:1px solid rgba(255,255,255,0.04);
+    padding:14px 16px;border-radius:12px;color:#eaf6ff;font-weight:700;text-align:left;cursor:pointer;display:flex;align-items:center;gap:12px;
+    transition:transform .12s ease,box-shadow .12s ease,background .12s;
+    box-shadow:0 8px 20px rgba(2,6,23,0.45);
+  }
+  .opt:hover{transform:translateY(-6px);box-shadow:0 18px 40px rgba(2,6,23,0.55)}
+  .opt .label{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--accent1),var(--accent2));display:flex;align-items:center;justify-content:center;color:#002;font-weight:800;box-shadow:0 6px 14px rgba(0,0,0,0.3)}
+  .opt .text{flex:1;font-size:16px}
+
+  /* right side: info */
+  .right{width:260px;display:flex;flex-direction:column;gap:12px}
+  .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
+  .timer{font-size:28px;font-weight:800;text-align:center}
+  .small{font-size:13px;color:#b7d7f0;margin-top:6px}
+
+  /* modal fail */
+  .modal-back{position:fixed;inset:0;background:rgba(2,6,23,0.6);display:flex;align-items:center;justify-content:center;z-index:60;opacity:0;pointer-events:none;transition:opacity .18s}
+  .modal-back.show{opacity:1;pointer-events:auto}
+  .modal{width:min(560px,94%);background:linear-gradient(180deg,#1b2430,#0b1220);border-radius:14px;padding:20px;border:1px solid rgba(255,255,255,0.06);box-shadow:0 18px 50px rgba(0,0,0,0.6);transform:translateY(10px);transition:transform .18s}
+  .modal-head{display:flex;align-items:center;gap:12px}
+  .m-ico{width:58px;height:58px;border-radius:12px;background:linear-gradient(45deg,#ff6b6b,#ff4757);display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:#fff}
+  .m-title{font-size:20px;font-weight:800}
+  .m-text{color:#dbeef9;margin-top:8px}
+  .m-actions{display:flex;gap:10px;margin-top:16px;justify-content:flex-end}
+
+  .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:#dbeeff;padding:10px 14px;border-radius:10px;cursor:pointer}
+  .btn-primary{background:linear-gradient(90deg,var(--accent1),var(--accent2));color:#001;padding:10px 16px;border-radius:10px;border:none;cursor:pointer;font-weight:800}
+  .btn-danger{background:linear-gradient(90deg,#ff7a7a,#ff4757);color:#fff;padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:800}
+
+  /* confetti container */
+  .confetti{position:fixed;inset:0;pointer-events:none;z-index:80}
+
+  /* responsive */
+  @media(max-width:900px){
+    .main{flex-direction:column}
+    .right{width:100%}
+    .progress-wrap{width:180px}
+    .card{padding:18px}
+  }
+</style>
+</head>
+<body>
+
+<!-- video fondo -->
+<video class="video-bg" autoplay loop muted playsinline>
+  <source src="https://cdn.pixabay.com/video/2015/11/02/1236-144355017_large.mp4" type="video/mp4">
+  Tu navegador no soporta video.
+</video>
+<div class="overlay"></div>
+
+<div class="app">
+  <div class="card" role="application" aria-label="Juego de Lenguaje Matemático">
+    <div class="top">
+      <div class="brand">
+        <div class="logo">LM</div>
+        <div>
+          <div class="title">Juego: Lenguaje Matemático</div>
+          <div class="subtitle">Responde sabiamente</div>
+        </div>
+      </div>
+      <div class="meta">
+        <div class="progress-wrap" title="Progreso">
+          <div id="progress" class="progress-bar" style="width:0%"></div>
+        </div>
+        <div style="width:110px;text-align:right">
+          <div class="score" id="score">Puntaje: 0</div>
+          <div class="small" id="qcount">0 / 25</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="left">
+        <div id="questionCard" class="question-card" aria-live="polite">
+          <div>
+            <div id="qtext" class="qtext">Cargando...</div>
+            <div id="opts" class="opts"></div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px">
+            <div class="small">Tiempo por pregunta: <strong id="timePerQ">15</strong>s</div>
+            <div class="small">Responde con rapidez ✅</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="right">
+        <div class="panel">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-size:13px;color:#bcd7ee;font-weight:700">Cuenta regresiva</div>
+            <div style="font-size:12px;color:#9fc9ea">Tiempo por pregunta</div>
+          </div>
+          <div style="margin-top:8px;text-align:center">
+            <div id="timer" class="timer">15</div>
+            <div class="small">segundos restantes</div>
+          </div>
+        </div>
+
+        <div class="panel" style="display:flex;flex-direction:column;gap:8px;align-items:center">
+          <div style="font-size:13px;color:#bcd7ee;font-weight:700">Opciones de juego</div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="btnStart" class="btn-primary">Iniciar</button>
+            <button id="btnReset" class="btn-ghost">Reiniciar</button>
+          </div>
+          <div class="small" style="margin-top:8px">Preguntas barajadas y sin repetición</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- modal fail -->
+<div id="modalBack" class="modal-back" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <div class="modal-head">
+      <div class="m-ico">❌</div>
+      <div>
+        <div id="mTitle" class="m-title">Respuesta incorrecta</div>
+        <div class="m-text" id="mText">No te preocupes — puedes intentarlo de nuevo o continuar con la siguiente pregunta.</div>
+      </div>
+    </div>
+    <div class="m-actions">
+      <button id="modalRestart" class="btn-danger">Reiniciar juego</button>
+      <button id="modalContinue" class="btn-primary">Continuar</button>
+    </div>
+  </div>
+</div>
+
+<!-- confetti -->
+<div id="confetti" class="confetti" aria-hidden="true"></div>
+
+<script>
+/* -----------------------
+   CONFIG y PREGUNTAS (25)
+   - barajar al inicio
+   - no repetir (iterar array)
+   - tiempo por pregunta configurable
+------------------------*/
+const TIME_PER_QUESTION = 15; // segundos — puedes cambiar
+const TOTAL_QUESTIONS = 25;
+
+// preguntas (25) — todas de selección múltiple
+const bank = [
+  {q:"¿Qué significa 'el doble de un número'?", opts:["x/2","2+x","2x"], r:2},
+  {q:"Un número más 5 se escribe:", opts:["x-5","x+5","5-x"], r:1},
+  {q:"¿Qué característica evita ambigüedad en matemáticas?", opts:["Color","Precisión","Decoración"], r:1},
+  {q:"¿Qué lenguaje usa gráficos?", opts:["Numérico","Gráfico","Coloquial"], r:1},
+  {q:"La mitad de un número es:", opts:["2x","x/2","x*2"], r:1},
+  {q:"¿Qué lenguaje usa letras y símbolos?", opts:["Natural","Algebraico","Artístico"], r:1},
+  {q:"Tres veces un número es:", opts:["x+3","x/3","3x"], r:2},
+  {q:"¿Qué lenguaje usa palabras matemáticas?", opts:["Coloquial","Numérico","Gráfico"], r:0},
+  {q:"El sucesor de un número es:", opts:["x-1","x+1","x*1"], r:1},
+  {q:"La suma de dos números es:", opts:["x*y","x-y","x+y"], r:2},
+  {q:"¿Qué hace universal a las matemáticas?", opts:["Color","Universalidad","Belleza"], r:1},
+  {q:"Cuatro menos un número:", opts:["4-x","x-4","x+4"], r:0},
+  {q:"El doble de la suma de x y 3:", opts:["x+3*2","2(x+3)","x2+3"], r:1},
+  {q:"Un número dividido entre 3:", opts:["3x","x÷3","3/x"], r:1},
+  {q:"Expresión de un número disminuido en 4:", opts:["x+4","4-x","x-4"], r:2},
+  {q:"¿Qué es una variable?", opts:["Un número fijo","Un valor desconocido representado por una letra","Un símbolo de operación"], r:1},
+  {q:"¿Qué representa x^2?", opts:["x multiplicado por 2","x al cuadrado","x sumado dos veces"], r:1},
+  {q:"Qué es una ecuación?", opts:["Una igualdad con variable","Una gráfica","Un número"], r:0},
+  {q:"Qué significa ≈ ?", opts:["Es igual exactamente","Aproximación","Desigualdad"], r:1},
+  {q:"Resultado 5! ?", opts:["120","25","60"], r:0},
+  {q:"Si 3x=15, x = ?", opts:["3","5","7"], r:1},
+  {q:"Si 2x+3=11, x = ?", opts:["3","4","5"], r:1},
+  {q:"Área rectángulo 6x4?", opts:["24","10","20"], r:0},
+  {q:"Si x/2 = 6, x = ?", opts:["12","8","6"], r:0},
+  {q:"Qué operador representa división?", opts:["+","/","^"], r:1}
+];
+
+// función shuffle Fisher-Yates
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+// estado
+let questions = []; // barajadas y cortadas a TOTAL_QUESTIONS
+let idx = 0;
+let score = 0;
+let timeLeft = TIME_PER_QUESTION;
+let timerInterval = null;
+let running = false;
+
+/* UI refs */
+const qtext = document.getElementById('qtext');
+const opts = document.getElementById('opts');
+const progress = document.getElementById('progress');
+const scoreEl = document.getElementById('score');
+const qcount = document.getElementById('qcount');
+const timerEl = document.getElementById('timer');
+const timePerQEl = document.getElementById('timePerQ');
+const questionCard = document.getElementById('questionCard');
+const modalBack = document.getElementById('modalBack');
+const modalRestart = document.getElementById('modalRestart');
+const modalContinue = document.getElementById('modalContinue');
+const btnStart = document.getElementById('btnStart');
+const btnReset = document.getElementById('btnReset');
+const confettiContainer = document.getElementById('confetti');
+const juegoBox = document.querySelector('.card');
+
+/* inicial UI */
+timePerQEl.textContent = TIME_PER_QUESTION;
+timerEl.textContent = TIME_PER_QUESTION;
+qcount.textContent = `0 / ${TOTAL_QUESTIONS}`;
+scoreEl.textContent = `Puntaje: 0`;
+
+/* sonidos con WebAudio */
+const audioCtx = window.AudioContext ? new AudioContext() : null;
+function playTone(freq,duration, type='sine', gain=0.08){
+  if(!audioCtx) return;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = type;
+  o.frequency.value = freq;
+  g.gain.value = gain;
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start();
+  setTimeout(()=>{ o.stop(); }, duration);
+}
+function soundCorrect(){ playTone(880,140,'sine',0.06); setTimeout(()=>playTone(1320,80,'sine',0.04),80); }
+function soundWrong(){ playTone(180,200,'sawtooth',0.09); }
+
+/* confetti simple */
+function createConfetti(){
+  const n=40;
+  for(let i=0;i<n;i++){
+    const el = document.createElement('div');
+    el.style.position='absolute';
+    el.style.pointerEvents='none';
+    el.style.left = (50 + (Math.random()-0.5)*60) + '%';
+    el.style.top = '-10%';
+    el.style.width = Math.random()*10+6+'px';
+    el.style.height = Math.random()*14+6+'px';
+    el.style.background = ['#ffbe0b','#fb5607','#ff006e','#3a86ff','#00c2ff'][Math.floor(Math.random()*5)];
+    el.style.transform = `rotate(${Math.random()*360}deg)`;
+    el.style.opacity = '0.95';
+    confettiContainer.appendChild(el);
+    const dur = 2000 + Math.random()*1200;
+    el.animate([
+      { transform: `translateY(0) rotate(0)`, opacity:1 },
+      { transform: `translateY(${70+Math.random()*100}vh) rotate(${Math.random()*720}deg)`, opacity:0.4 }
+    ], { duration: dur, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    setTimeout(()=> el.remove(), dur+50);
+  }
+}
+
+/* setup nuevo juego */
+function setupGame(){
+  // barajar banco, cortar a TOTAL_QUESTIONS
+  questions = shuffle(bank.slice()).slice(0, TOTAL_QUESTIONS);
+  idx = 0;
+  score = 0;
+  scoreEl.textContent = `Puntaje: ${score}`;
+  updateProgress();
+  qcount.textContent = `${idx} / ${TOTAL_QUESTIONS}`;
+  stopTimer();
+  running = false;
+  qtext.textContent = 'Presiona Iniciar para comenzar el examen';
+  opts.innerHTML = '';
+}
+
+/* mostrar pregunta actual */
+function showQuestion(){
+  if(idx >= questions.length){
+    // terminó correctamente (completaste)
+    finishSuccess();
+    return;
+  }
+  const item = questions[idx];
+  // anim
+  questionCard.classList.remove('enter');
+  void questionCard.offsetWidth;
+  questionCard.classList.add('enter');
+
+  qtext.textContent = item.q;
+  opts.innerHTML = '';
+  item.opts.forEach((o,i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'opt';
+    btn.innerHTML = `<div class="label">${String.fromCharCode(65+i)}</div><div class="text">${o}</div>`;
+    btn.onclick = ()=> handleAnswer(i);
+    opts.appendChild(btn);
+  });
+  qcount.textContent = `${idx} / ${TOTAL_QUESTIONS}`;
+  updateProgress();
+  resetTimer();
+  startTimer();
+}
+
+/* manejar respuesta */
+function handleAnswer(selectedIndex){
+  if(!running) return;
+  const item = questions[idx];
+  stopTimer();
+  if(selectedIndex === item.r){
+    // correcto
+    score++;
+    scoreEl.textContent = `Puntaje: ${score}`;
+    soundCorrect();
+    // pequeña animación de éxito
+    questionCard.animate([{transform:'scale(1)'},{transform:'scale(1.02)'},{transform:'scale(1)'}],{duration:260,easing:'ease-out'});
+    idx++;
+    // si completado, dar confetti y pantalla final
+    if(idx >= questions.length){
+      setTimeout(()=> finishSuccess(), 280);
+      return;
+    }
+    setTimeout(()=> showQuestion(), 260);
+  } else {
+    // incorrecto -> mostrar modal con opciones
+    soundWrong();
+    showFailModal();
+  }
+}
+
+/* TIMER */
+function startTimer(){
+  timeLeft = TIME_PER_QUESTION;
+  timerEl.textContent = timeLeft;
+  running = true;
+  timerInterval = setInterval(()=>{
+    timeLeft--;
+    timerEl.textContent = timeLeft;
+    // color warning
+    if(timeLeft <= 5) timerEl.style.color = '#ffcccb';
+    else timerEl.style.color = '#e9f6ff';
+    if(timeLeft <= 0){
+      stopTimer();
+      // time out => treat as wrong
+      soundWrong();
+      showFailModal('Se terminó el tiempo');
+    }
+  },1000);
+}
+function stopTimer(){ if(timerInterval){ clearInterval(timerInterval); timerInterval=null;} running=false; timerEl.style.color = '#e9f6ff'; }
+function resetTimer(){ stopTimer(); timeLeft = TIME_PER_QUESTION; timerEl.textContent = timeLeft; }
+
+/* PROGRESS */
+function updateProgress(){
+  const pct = Math.round((idx / TOTAL_QUESTIONS) * 100);
+  progress.style.width = pct + '%';
+}
+
+/* MODAL fail */
+function showFailModal(reason){
+  modalBack.classList.add('show');
+  modalBack.setAttribute('aria-hidden','false');
+  // set text
+  const mText = document.getElementById('mText');
+  mText.textContent = reason ? `${reason}. Elige:` : 'Respuesta incorrecta. Puedes reiniciar o continuar con la siguiente pregunta.';
+  // shake card
+  juegoBox.classList.add('shake');
+  setTimeout(()=> juegoBox.classList.remove('shake'), 700);
+}
+function hideFailModal(){ modalBack.classList.remove('show'); modalBack.setAttribute('aria-hidden','true'); }
+
+/* modal actions */
+modalRestart.addEventListener('click', ()=> {
+  hideFailModal();
+  setupGame();
+});
+modalContinue.addEventListener('click', ()=> {
+  hideFailModal();
+  // skip this question (no repetir): advance index and continue
+  idx++;
+  updateProgress();
+  scoreEl.textContent = `Puntaje: ${score}`;
+  if(idx >= questions.length) finishSuccess();
+  else showQuestion();
+});
+
+/* finish success */
+function finishSuccess(){
+  stopTimer();
+  // confetti y modal de éxito
+  createConfetti();
+  // pequeña pantalla de éxito en el centro (usar modalBack)
+  showSuccessOverlay();
+}
+
+/* success overlay */
+function showSuccessOverlay(){
+  // reutilizo modalBack para mostrar éxito
+  modalBack.classList.add('show');
+  modalBack.style.background = 'linear-gradient(180deg, rgba(2,6,23,0.65), rgba(2,6,23,0.85))';
+  modalBack.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true">
+      <div style="text-align:center;padding:6px">
+        <div style="font-size:60px">🏆</div>
+        <div style="font-weight:800;font-size:22px;margin-top:8px">¡Felicidades! Completaste el examen</div>
+        <div style="color:#d2f6e6;margin-top:8px">Tu puntaje: <strong>${score} / ${TOTAL_QUESTIONS}</strong></div>
+        <div style="margin-top:18px;display:flex;gap:10px;justify-content:center">
+          <button id="playAgain" class="btn-primary">Jugar de nuevo</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('playAgain').addEventListener('click', ()=>{
+    // restore modalBack html to original and restart
+    modalBack.style.background = '';
+    modalBack.innerHTML = document.querySelector('.modal-back-template').innerHTML;
+    // rebind modal references (easiest: reload page)
+    location.reload();
+  });
+}
+
+/* start / reset buttons */
+btnStart.addEventListener('click', ()=>{
+  if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  if(questions.length === 0) setupGame(); // just in case
+  idx = 0; score = 0;
+  shuffle(questions);
+  scoreEl.textContent = `Puntaje: ${score}`;
+  updateProgress();
+  showQuestion();
+});
+btnReset.addEventListener('click', ()=> {
+  setupGame();
+});
+
+/* store template of modalBack to restore after success */
+(function storeModalTemplate(){
+  const template = modalBack.innerHTML;
+  const wrapper = document.createElement('div');
+  wrapper.className = 'modal-back-template';
+  wrapper.style.display = 'none';
+  wrapper.innerHTML = template;
+  document.body.appendChild(wrapper);
+})();
+
+/* initialize */
+setupGame();
+
+/* ensure keyboard accessibility: keys A/B/C map to options when visible */
+document.addEventListener('keydown', (e)=>{
+  if(!running) return;
+  const key = e.key.toLowerCase();
+  if(['a','b','c'].includes(key)){
+    const el = opts.children[key.charCodeAt(0)-97]; // a->0
+    if(el) el.click();
+  }
+});
+</script>
+</body>
+</html>
